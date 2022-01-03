@@ -5,10 +5,8 @@ using v2rayN.Mode;
 
 namespace v2rayN.Forms
 {
-    public partial class AddServer3Form : BaseForm
-    {
-        public int EditIndex { get; set; }
-        VmessItem vmessItem = null;
+    public partial class AddServer3Form : BaseServerForm
+    { 
 
         public AddServer3Form()
         {
@@ -96,48 +94,13 @@ namespace v2rayN.Forms
             }
             else
             {
-                UI.Show(UIRes.I18N("OperationFailed"));
+                UI.ShowWarning(UIRes.I18N("OperationFailed"));
             }
         }
         private void btnClose_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
-        }
-
-
-        #region 导入配置
-         
-        /// <summary>
-        /// 从剪贴板导入URL
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void menuItemImportClipboard_Click(object sender, EventArgs e)
-        {
-            ImportConfig();
-        }
-
-        private void ImportConfig()
-        {
-            ClearServer();
-
-            string msg;
-            VmessItem vmessItem = V2rayConfigHandler.ImportFromClipboardConfig(Utils.GetClipboardData(), out msg);
-            if (vmessItem == null)
-            {
-                UI.Show(msg);
-                return;
-            }
-
-            txtAddress.Text = vmessItem.address;
-            txtPort.Text = vmessItem.port.ToString();
-            cmbSecurity.Text = vmessItem.security;
-            txtId.Text = vmessItem.id;
-            txtRemarks.Text = vmessItem.remarks;
-        }
-         
-        #endregion
-         
+        }       
 
     }
 }

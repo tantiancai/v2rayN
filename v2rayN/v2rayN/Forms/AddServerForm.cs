@@ -5,10 +5,8 @@ using v2rayN.Mode;
 
 namespace v2rayN.Forms
 {
-    public partial class AddServerForm : BaseForm
+    public partial class AddServerForm : BaseServerForm
     {
-        public int EditIndex { get; set; }
-        VmessItem vmessItem = null;
 
         public AddServerForm()
         {
@@ -39,14 +37,9 @@ namespace v2rayN.Forms
             txtId.Text = vmessItem.id;
             txtAlterId.Text = vmessItem.alterId.ToString();
             cmbSecurity.Text = vmessItem.security;
-            cmbNetwork.Text = vmessItem.network;
             txtRemarks.Text = vmessItem.remarks;
 
-            cmbHeaderType.Text = vmessItem.headerType;
-            txtRequestHost.Text = vmessItem.requestHost;
-            txtPath.Text = vmessItem.path;
-            cmbStreamSecurity.Text = vmessItem.streamSecurity;
-            cmbAllowInsecure.Text = vmessItem.allowInsecure;
+            transportControl.BindingServer(vmessItem);
         }
 
 
@@ -60,55 +53,11 @@ namespace v2rayN.Forms
             txtId.Text = "";
             txtAlterId.Text = "0";
             cmbSecurity.Text = Global.DefaultSecurity;
-            cmbNetwork.Text = Global.DefaultNetwork;
             txtRemarks.Text = "";
 
-            cmbHeaderType.Text = Global.None;
-            txtRequestHost.Text = "";
-            cmbStreamSecurity.Text = "";
-            cmbAllowInsecure.Text = "";
-            txtPath.Text = "";
+            transportControl.ClearServer(vmessItem);
         }
-
-
-        private void cmbNetwork_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            SetHeaderType();
-        }
-
-        /// <summary>
-        /// 设置伪装选项
-        /// </summary>
-        private void SetHeaderType()
-        {
-            cmbHeaderType.Items.Clear();
-
-            string network = cmbNetwork.Text;
-            if (Utils.IsNullOrEmpty(network))
-            {
-                cmbHeaderType.Items.Add(Global.None);
-                return;
-            }
-
-            cmbHeaderType.Items.Add(Global.None);
-            if (network.Equals(Global.DefaultNetwork))
-            {
-                cmbHeaderType.Items.Add(Global.TcpHeaderHttp);
-            }
-            else if (network.Equals("kcp") || network.Equals("quic"))
-            {
-                cmbHeaderType.Items.Add("srtp");
-                cmbHeaderType.Items.Add("utp");
-                cmbHeaderType.Items.Add("wechat-video");
-                cmbHeaderType.Items.Add("dtls");
-                cmbHeaderType.Items.Add("wireguard");
-            }
-            else
-            {
-            }
-            cmbHeaderType.Text = Global.None;
-        }
-
+         
         private void btnOK_Click(object sender, EventArgs e)
         {
             string address = txtAddress.Text;
@@ -116,14 +65,7 @@ namespace v2rayN.Forms
             string id = txtId.Text;
             string alterId = txtAlterId.Text;
             string security = cmbSecurity.Text;
-            string network = cmbNetwork.Text;
             string remarks = txtRemarks.Text;
-
-            string headerType = cmbHeaderType.Text;
-            string requestHost = txtRequestHost.Text;
-            string path = txtPath.Text;
-            string streamSecurity = cmbStreamSecurity.Text;
-            string allowInsecure = cmbAllowInsecure.Text;
 
             if (Utils.IsNullOrEmpty(address))
             {
@@ -146,19 +88,14 @@ namespace v2rayN.Forms
                 return;
             }
 
+            transportControl.EndBindingServer();
+
             vmessItem.address = address;
             vmessItem.port = Utils.ToInt(port);
             vmessItem.id = id;
             vmessItem.alterId = Utils.ToInt(alterId);
             vmessItem.security = security;
-            vmessItem.network = network;
             vmessItem.remarks = remarks;
-
-            vmessItem.headerType = headerType;
-            vmessItem.requestHost = requestHost.Replace(" ", "");
-            vmessItem.path = path.Replace(" ", "");
-            vmessItem.streamSecurity = streamSecurity;
-            vmessItem.allowInsecure = allowInsecure;
 
             if (ConfigHandler.AddServer(ref config, vmessItem, EditIndex) == 0)
             {
@@ -166,7 +103,7 @@ namespace v2rayN.Forms
             }
             else
             {
-                UI.Show(UIRes.I18N("OperationFailed"));
+                UI.ShowWarning(UIRes.I18N("OperationFailed"));
             }
         }
 
@@ -179,7 +116,6 @@ namespace v2rayN.Forms
         {
             this.DialogResult = DialogResult.Cancel;
         }
-
 
         #region 导入客户端/服务端配置
 
@@ -207,9 +143,11 @@ namespace v2rayN.Forms
         {
             ClearServer();
 
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.Multiselect = false;
-            fileDialog.Filter = "Config|*.json|All|*.*";
+            OpenFileDialog fileDialog = new OpenFileDialog
+            {
+                Multiselect = false,
+                Filter = "Config|*.json|All|*.*"
+            };
             if (fileDialog.ShowDialog() != DialogResult.OK)
             {
                 return;
@@ -220,31 +158,29 @@ namespace v2rayN.Forms
                 return;
             }
             string msg;
-            VmessItem vmessItem;
+            VmessItem vmessItemTemp;
             if (type.Equals(1))
             {
-                vmessItem = V2rayConfigHandler.ImportFromClientConfig(fileName, out msg);
+                vmessItemTemp = V2rayConfigHandler.ImportFromClientConfig(fileName, out msg);
             }
             else
             {
-                vmessItem = V2rayConfigHandler.ImportFromServerConfig(fileName, out msg);
+                vmessItemTemp = V2rayConfigHandler.ImportFromServerConfig(fileName, out msg);
             }
-            if (vmessItem == null)
+            if (vmessItemTemp == null)
             {
-                UI.Show(msg);
+                UI.ShowWarning(msg);
                 return;
             }
+            vmessItem = vmessItemTemp;
 
             txtAddress.Text = vmessItem.address;
             txtPort.Text = vmessItem.port.ToString();
             txtId.Text = vmessItem.id;
             txtAlterId.Text = vmessItem.alterId.ToString();
             txtRemarks.Text = vmessItem.remarks;
-            cmbNetwork.Text = vmessItem.network;
-            cmbHeaderType.Text = vmessItem.headerType;
-            txtRequestHost.Text = vmessItem.requestHost;
-            txtPath.Text = vmessItem.path;
-            cmbStreamSecurity.Text = vmessItem.streamSecurity;
+
+            transportControl.BindingServer(vmessItem);
         }
 
         /// <summary>
@@ -256,38 +192,23 @@ namespace v2rayN.Forms
         {
             ClearServer();
 
-            string msg;
-            VmessItem vmessItem = V2rayConfigHandler.ImportFromClipboardConfig(Utils.GetClipboardData(), out msg);
-            if (vmessItem == null)
+            VmessItem vmessItemTemp = ShareHandler.ImportFromClipboardConfig(Utils.GetClipboardData(), out string msg);
+            if (vmessItemTemp == null)
             {
-                UI.Show(msg);
+                UI.ShowWarning(msg);
                 return;
             }
+            vmessItem = vmessItemTemp;
 
             txtAddress.Text = vmessItem.address;
             txtPort.Text = vmessItem.port.ToString();
             txtId.Text = vmessItem.id;
             txtAlterId.Text = vmessItem.alterId.ToString();
             txtRemarks.Text = vmessItem.remarks;
-            cmbNetwork.Text = vmessItem.network;
-            cmbHeaderType.Text = vmessItem.headerType;
-            txtRequestHost.Text = vmessItem.requestHost;
-            txtPath.Text = vmessItem.path;
-            cmbStreamSecurity.Text = vmessItem.streamSecurity;
+
+            transportControl.BindingServer(vmessItem);
         }
         #endregion
 
-        private void cmbStreamSecurity_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            string security = cmbStreamSecurity.Text;
-            if (Utils.IsNullOrEmpty(security))
-            {
-                panTlsMore.Hide();
-            }
-            else
-            {
-                panTlsMore.Show();
-            }
-        }
     }
 }
